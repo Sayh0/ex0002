@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- resource namespace 경로는 원래 package와 동일한 경로, 동일한 네임스페이스 해야 한다.  -->
+<mapper namespace="org.zerock.mapper.BoardMapper">
+
+	<sql id="criteria">
+		<trim prefix="(" suffix =") AND " prefixOverrides="OR">
+			<foreach item='type' collection="typeArr">
+				<trim prefix="OR">
+					<choose>
+						<when test="type == 'T'.toString()">
+						title like '%' ||#{keyword}||'%'
+						</when>
+						<when test="type == 'C'.toString()">
+						content like '%'||#{keyword}||'%'
+						</when>
+						<when test="type=='W'.toString()">
+						writer like '%'||#{keyword}||'%'
+						</when>
+					</choose>
+				</trim>
+			</foreach>
+		</trim>
+	</sql>
+	
+ 	<select id="getList" resultType="org.zerock.domain.BoardVO">
+		<![CDATA[
+		SELECT * FROM tbl_board WHERE bno > 0
+		]]>
+ 	</select>
+
+	<insert id="insert"> <!-- 파라미터 값이 한개면 파라미터 타입 생략 가능 -->
+		INSERT INTO tbl_board (bno,title,content,writer)
+		VALUES (seq_board.nextval, #{title}, #{content}, #{writer})
+	</insert>
+
+	<!-- bno 값을 알아야 할 때 사용 -->
+	<insert id="insertSelectKey">
+
+		<selectKey keyProperty="bno" order="BEFORE" 
+			resultType="long">
+			select seq_board.nextval from dual
+		</selectKey>
+
+		insert into tbl_board (bno,title,content, writer)
+		values (#{bno},
+		#{title}, #{content}, #{writer})
+	</insert>
+	<!-- 사용 예) 방금 작성한 글을 보려고 할 때 URL에 글번호를 담아줄 수 있음 -->
+	
+	<select id="read" resultType="org.zerock.domain.BoardVO">
+		<![CDATA[
+		SELECT * FROM tbl_board WHERE bno = #{bno}
+		]]>
+	</select>
+	
+	<delete id="delete">
+		<![CDATA[
+		DELETE FROM tbl_board WHERE bno = #{bno}
+		]]>
+	</delete>
+	
+	<update id="update">
+		<![CDATA[
+		UPDATE tbl_board
+		SET title = #{title},
+			content = #{content},
+			writer = #{writer},
+			updateDate = sysdate
+		WHERE bno = #{bno} 
+		]]>
+	</update>
+	
+	<!--  검색 기능 추가 전 -->
+<!-- 	<select id="getListWithPaging" resultType="org.zerock.domain.BoardVO">
+		<![CDATA[
+		SELECT bno, title, content, writer, regdate, updatedate 
+		FROM (
+			SELECT /*+INDEX_DESC, tbl_board pk_board */
+			rownum rn, bno, title, content, writer, regdate, updatedate
+			FROM tbl_board
+			WHERE rownum <= #{pageNum} * #{amount}
+			)
+		WHERE rn > (#{pageNum} - 1) * #{amount}		 
+		]]>
+ 	</select> -->
+	
+	<select id="getListWithPaging" resultType="org.zerock.domain.BoardVO">
+		<![CDATA[
+		SELECT bno, title, content, writer, regdate, updatedate 
+		FROM (
+			SELECT /*+INDEX_DESC, tbl_board pk_board */
+			rownum rn, bno, title, content, writer, regdate, updatedate
+			FROM tbl_board
+			WHERE 
+		]]>
+		<include refid="criteria"></include>
+		<![CDATA[
+			rownum <= #{pageNum} * #{amount}
+			)
+		WHERE rn > (#{pageNum} - 1) * #{amount}
+		]]>
+ 	</select>
+	
+</mapper>
